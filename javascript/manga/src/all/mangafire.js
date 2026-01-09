@@ -103,7 +103,7 @@ class DefaultExtension extends MProvider {
     var slug = `language=${this.source.lang}&page=${page}`;
 
     // Search sometimes failed because filters were empty. I experienced this mostly on android...
-    var isFiltersAvailable = filters || filters.length > 0;
+    const isFiltersAvailable = Array.isArray(filters) && filters.length >= 5;
     if (isFiltersAvailable) {
       for (const filter of filters[0].state) {
         if (filter.state == true) slug += `&type%5B%5D=${filter.value}`;
