@@ -7,7 +7,7 @@ const mangayomiSources = [{
     "iconUrl": "https://www.google.com/s2/favicons?sz=128&domain=https://weebcentral.com",
     "typeSource": "single",
     "itemType": 0,
-    "version": "0.1.3",
+    "version": "0.1.4",
     "pkgPath": "manga/src/en/weebcentral.js"
 }];
 
