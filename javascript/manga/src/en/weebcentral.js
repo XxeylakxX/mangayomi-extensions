@@ -42,49 +42,69 @@ class DefaultExtension extends MProvider {
     getImageUrl(id) { return `https://temp.compsci88.com/cover/normal/${id}.webp`; }
 
     async search(query, page, filters) {
-        var offset = 32 * (parseInt(page) - 1)
-        var sort = filters[0].values[filters[0].state].value
-        var order = filters[1].values[filters[1].state].value
-        var translation = filters[2].values[filters[2].state].value
-        var status = ""
-        for (var filter of filters[3].state) {
-            if (filter.state == true)
-                status += `&included_status=${filter.value}`
-        }
-        var type = ""
-        for (var filter of filters[4].state) {
-            if (filter.state == true)
-                type += `&included_type=${filter.value}`
-        }
-        var tags = ""
-        for (var filter of filters[5].state) {
-            if (filter.state == true)
-                tags += `&included_tag=${filter.value}`
-        }
-        var slug = `/search/data?limit=32&offset=${offset}&author=&text=${query}&sort=${sort}&order=${order}&official=${translation}${status}${type}${tags}&display_mode=Full%20Display`
-        var doc = await this.request(slug);
-        var list = [];
-        var mangaElements = doc.select("article:has(section)")
-        for (var manga of mangaElements) {
-            var imageUrl = manga.selectFirst("img").getSrc;
-            var details = manga.selectFirst("section > a");
-            var link = details.getHref;
-            var name = manga.selectFirst("article > div > div > div").text;
-            list.push({ name, imageUrl, link });
-        }
-
-        var hasNextPage = doc.selectFirst("button").text.length > 0;
-        return { list, hasNextPage }
-
+      const safeFilters = Array.isArray(filters)
+        ? filters
+        : this.getFilterList();
+    
+      const offset = 32 * (parseInt(page) - 1);
+    
+      const sort = encodeURIComponent(
+        safeFilters[0]?.values?.[safeFilters[0].state]?.value ?? "Best Match"
+      );
+    
+      const order = encodeURIComponent(
+        safeFilters[1]?.values?.[safeFilters[1].state]?.value ?? "Ascending"
+      );
+    
+      const translation = encodeURIComponent(
+        safeFilters[2]?.values?.[safeFilters[2].state]?.value ?? "Any"
+      );
+    
+      const text = encodeURIComponent(query ?? "");
+    
+      let status = "";
+      if (safeFilters[3]?.state) {
+        for (const f of safeFilters[3].state)
+          if (f.state) status += `&included_status=${f.value}`;
+      }
+    
+      let type = "";
+      if (safeFilters[4]?.state) {
+        for (const f of safeFilters[4].state)
+          if (f.state) type += `&included_type=${f.value}`;
+      }
+    
+      let tags = "";
+      if (safeFilters[5]?.state) {
+        for (const f of safeFilters[5].state)
+          if (f.state) tags += `&included_tag=${f.value}`;
+      }
+    
+      const slug =
+        `/search/data?limit=32&offset=${offset}` +
+        `&author=&text=${text}` +
+        `&sort=${sort}&order=${order}&official=${translation}` +
+        `${status}${type}${tags}` +
+        `&display_mode=Full%20Display`;
+    
+      const doc = await this.request(slug);
+    
+      const list = [];
+      doc.select("article:has(section)").forEach(manga => {
+        list.push({
+          name: manga.selectFirst("article > div > div > div").text,
+          imageUrl: manga.selectFirst("img").getSrc,
+          link: manga.selectFirst("section > a").getHref
+        });
+      });
+    
+      const hasNextPage =
+        doc.selectFirst("button:not([disabled])") != null;
+    
+      return { list, hasNextPage };
     }
-    statusCode(status) {
-        return {
-            "Ongoing": 0,
-            "Complete": 1,
-            "Hiatus": 2,
-            "Canceled": 3,
-        }[status] ?? 5;
-    }
+
+
 
     async getDetail(url) {
         var urlSplits = url.split("/");
