@@ -89,13 +89,16 @@ class DefaultExtension extends MProvider {
     
       const list = [];
       doc.select("article:has(section)").forEach(manga => {
-        list.push({
-          name: manga.selectFirst("article > div > div > div").text,
-          imageUrl: manga.selectFirst("img")?.getSrc(),
-          link: manga.selectFirst("section > a")?.getHref()
-
-        });
+      const img = manga.selectFirst("img");
+      const a = manga.selectFirst("section > a");
+    
+      list.push({
+        name: manga.selectFirst("article > div > div > div")?.text ?? "",
+        imageUrl: img ? img.getSrc : "",
+        link: a ? a.getHref : ""
       });
+    });
+
     
       const hasNextPage =
         doc.selectFirst("button:not([disabled])") != null;
