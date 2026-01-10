@@ -7,7 +7,7 @@ const mangayomiSources = [{
     "iconUrl": "https://www.google.com/s2/favicons?sz=128&domain=https://weebcentral.com",
     "typeSource": "single",
     "itemType": 0,
-    "version": "0.1.4",
+    "version": "0.1.5",
     "pkgPath": "manga/src/en/weebcentral.js"
 }];
 
@@ -85,7 +85,7 @@ class DefaultExtension extends MProvider {
         `${status}${type}${tags}` +
         `&display_mode=Full%20Display`;
     
-      const doc = await this.request(slug);
+      let doc = await this.request(slug);
     
       const list = [];
       doc.select("article:has(section)").forEach(manga => {
