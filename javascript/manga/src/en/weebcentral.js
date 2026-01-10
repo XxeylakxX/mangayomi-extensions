@@ -7,7 +7,7 @@ const mangayomiSources = [{
     "iconUrl": "https://www.google.com/s2/favicons?sz=128&domain=https://weebcentral.com",
     "typeSource": "single",
     "itemType": 0,
-    "version": "0.1.8",
+    "version": "0.1.9",
     "pkgPath": "manga/src/en/weebcentral.js"
 }];
 
@@ -43,52 +43,42 @@ class DefaultExtension extends MProvider {
         const safeFilters = Array.isArray(filters) ? filters : this.getFilterList();
         const offset = 32 * (parseInt(page) - 1);
 
-        const sort = encodeURIComponent(
-            safeFilters[0]?.values?.[safeFilters[0].state]?.value ?? "Best Match"
-        );
-        const order = encodeURIComponent(
-            safeFilters[1]?.values?.[safeFilters[1].state]?.value ?? "Ascending"
-        );
-        const translation = encodeURIComponent(
-            safeFilters[2]?.values?.[safeFilters[2].state]?.value ?? "Any"
-        );
+        const sort = encodeURIComponent(safeFilters[0].values[safeFilters[0].state].value);
+        const order = encodeURIComponent(safeFilters[1].values[safeFilters[1].state].value);
+        const translation = encodeURIComponent(safeFilters[2].values[safeFilters[2].state].value);
         const text = encodeURIComponent(query ?? "");
 
         let status = "";
-        if (safeFilters[3]?.state) {
-            for (const f of safeFilters[3].state)
-                if (f.state) status += `&included_status=${f.value}`;
+        for (const f of safeFilters[3].state) {
+            if (f.state) status += `&included_status=${f.value}`;
         }
 
         let type = "";
-        if (safeFilters[4]?.state) {
-            for (const f of safeFilters[4].state)
-                if (f.state) type += `&included_type=${f.value}`;
+        for (const f of safeFilters[4].state) {
+            if (f.state) type += `&included_type=${f.value}`;
         }
 
         let tags = "";
-        if (safeFilters[5]?.state) {
-            for (const f of safeFilters[5].state)
-                if (f.state) tags += `&included_tag=${f.value}`;
+        for (const f of safeFilters[5].state) {
+            if (f.state) tags += `&included_tag=${f.value}`;
         }
 
         const slug = `/search/data?limit=32&offset=${offset}&author=&text=${text}&sort=${sort}&order=${order}&official=${translation}${status}${type}${tags}&display_mode=Full%20Display`;
-
         const doc = await this.request(slug);
 
         const list = [];
-        doc.select("article:has(section)").forEach(manga => {
+        const mangaElements = doc.select("article:has(section)");
+        
+        for (const manga of mangaElements) {
             const img = manga.selectFirst("img");
             const a = manga.selectFirst("section > a");
-
+            
             list.push({
                 name: manga.selectFirst("article > div > div > div")?.text ?? "",
-                // FIXED: Changed .getSrc() to .attr("src")
-                imageUrl: img ? img.attr("src") : "", 
-                // FIXED: Changed .getHref() to .attr("href")
-                link: a ? a.attr("href") : ""         
+                imageUrl: img ? img.attr("src") : "", // FIXED: Use attr("src")
+                link: a ? a.attr("href") : ""         // FIXED: Use attr("href")
             });
-        });
+        }
 
         const hasNextPage = doc.selectFirst("button:not([disabled])") != null;
         return { list, hasNextPage };
@@ -107,11 +97,13 @@ class DefaultExtension extends MProvider {
     async getDetail(url) {
         const clean = url.replace(/^https?:\/\/[^/]+/, "");
         const slug = clean.startsWith("/series/") ? clean : `/series/${clean}`;
+        
         let doc = await this.request(slug);
 
+        // FIXED: Scrape the actual image from the detail page instead of generating a temp URL
         const imgEl = doc.selectFirst("img.object-cover");
-        // FIXED: Changed .getSrc() to .attr("src")
         const imageUrl = imgEl ? imgEl.attr("src") : ""; 
+        
         const description = doc.selectFirst("p.whitespace-pre-wrap.break-words")?.text ?? "";
 
         let chapters = [];
@@ -131,17 +123,23 @@ class DefaultExtension extends MProvider {
             }
         }
 
+        // Fetch Chapters
         const chapSlug = `${slug}/full-chapter-list`;
         doc = await this.request(chapSlug);
 
         const chapList = doc.select("div.flex.items-center");
         for (const chap of chapList) {
-            const name = chap.selectFirst("span.grow.flex.items-center.gap-2")?.selectFirst("span")?.text ?? "";
+            const nameEl = chap.selectFirst("span.grow.flex.items-center.gap-2")?.selectFirst("span");
+            const name = nameEl ? nameEl.text : "";
+            
             const timeEl = chap.selectFirst("time.text-datetime");
-            const dateUpload = timeEl
-              ? new Date(timeEl.attr("datetime") ?? timeEl.text).valueOf().toString()
-              : "0";
-            const url = chap.selectFirst("input")?.attr("value") ?? "";
+            const dateUpload = timeEl 
+                ? new Date(timeEl.attr("datetime") ?? timeEl.text).valueOf().toString() 
+                : "0";
+                
+            const inputEl = chap.selectFirst("input");
+            const url = inputEl ? inputEl.attr("value") : "";
+            
             chapters.push({ name, url, dateUpload });
         }
 
