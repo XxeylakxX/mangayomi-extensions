@@ -7,7 +7,7 @@ const mangayomiSources = [{
     "iconUrl": "https://www.google.com/s2/favicons?sz=128&domain=https://weebcentral.com",
     "typeSource": "single",
     "itemType": 0,
-    "version": "0.1.7",
+    "version": "0.1.8",
     "pkgPath": "manga/src/en/weebcentral.js"
 }];
 
@@ -110,7 +110,8 @@ class DefaultExtension extends MProvider {
         let doc = await this.request(slug);
 
         const imgEl = doc.selectFirst("img.object-cover");
-        const imageUrl = imgEl ? imgEl.getSrc() : "";
+        // FIXED: Changed .getSrc() to .attr("src")
+        const imageUrl = imgEl ? imgEl.attr("src") : ""; 
         const description = doc.selectFirst("p.whitespace-pre-wrap.break-words")?.text ?? "";
 
         let chapters = [];
