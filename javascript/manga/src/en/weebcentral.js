@@ -122,8 +122,9 @@ class DefaultExtension extends MProvider {
             ? clean
             : `/series/${clean}`;
         const doc = await this.request(slug);
-        var imageUrl =
-            doc.selectFirst("img.object-cover")?.getSrc() ?? "";
+        const imgEl = doc.selectFirst("img.object-cover");
+        var imageUrl = imgEl ? imgEl.getSrc : "";
+
         var description = doc.selectFirst("p.whitespace-pre-wrap.break-words")?.text ?? "";
 
         
