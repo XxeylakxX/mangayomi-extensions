@@ -39,8 +39,6 @@ class DefaultExtension extends MProvider {
         return await this.search("", page, filters)
     }
 
-    getImageUrl(id) { return `https://temp.compsci88.com/cover/normal/${id}.webp`; }
-
     async search(query, page, filters) {
       const safeFilters = Array.isArray(filters)
         ? filters
@@ -93,8 +91,9 @@ class DefaultExtension extends MProvider {
       doc.select("article:has(section)").forEach(manga => {
         list.push({
           name: manga.selectFirst("article > div > div > div").text,
-          imageUrl: manga.selectFirst("img").getSrc,
-          link: manga.selectFirst("section > a").getHref
+          imageUrl: manga.selectFirst("img")?.getSrc(),
+          link: manga.selectFirst("section > a")?.getHref()
+
         });
       });
     
@@ -104,15 +103,27 @@ class DefaultExtension extends MProvider {
       return { list, hasNextPage };
     }
 
-
+    statusCode(status) {
+        switch (status.toLowerCase()) {
+            case "ongoing": return 0;
+            case "complete": return 1;
+            case "hiatus": return 2;
+            case "canceled": return 3;
+            default: return 5;
+        }
+    }
 
     async getDetail(url) {
-        var urlSplits = url.split("/");
-        var link = urlSplits[urlSplits.length - 2];
-        var slug = url.startsWith("http") ? `/series/${link}` : `/series/${url}`;
-        var doc = await this.request(slug);
-        var imageUrl = url.startsWith("http") ? this.getImageUrl(link) : this.getImageUrl(url);
-        var description = doc.selectFirst("p.whitespace-pre-wrap.break-words").text
+        const clean = url.replace(/^https?:\/\/[^/]+/, "");
+        const slug = clean.startsWith("/series/")
+            ? clean
+            : `/series/${clean}`;
+        const doc = await this.request(slug);
+        var imageUrl =
+            doc.selectFirst("img.object-cover")?.getSrc() ?? "";
+        var description = doc.selectFirst("p.whitespace-pre-wrap.break-words")?.text ?? "";
+
+        
 
         var chapters = []
         var ul = doc.select("ul.flex.flex-col.gap-4 > li")
@@ -136,7 +147,10 @@ class DefaultExtension extends MProvider {
         var chapList = doc.select("div.flex.items-center");
         for (var chap of chapList) {
             var name = chap.selectFirst("span.grow.flex.items-center.gap-2").selectFirst("span").text
-            var dateUpload = new Date(chap.selectFirst("time.text-datetime").text).valueOf().toString()
+            const timeEl = chap.selectFirst("time.text-datetime");
+            const dateUpload = timeEl
+              ? new Date(timeEl.attr("datetime") ?? timeEl.text).valueOf().toString()
+              : "0";
             var url = chap.selectFirst("input").attr("value")
             chapters.push({ name, url, dateUpload })
         }
